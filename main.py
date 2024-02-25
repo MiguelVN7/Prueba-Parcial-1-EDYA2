@@ -1,92 +1,76 @@
-#Con este no me dan discrepancias pero se demora mucho en ejecutar
+def solicitar_datos():
+    num_palitos = int(input())
+    if num_palitos == 0:
+        return None, None
+    longitudes_palitos = list(map(int, input().split()))
+    return num_palitos, longitudes_palitos
 
-def separar_longitudes(longitudes):
-    longitudes_separadas = longitudes.split(' ')
-    longitudes_separadas = [x for x in longitudes_separadas if x]
-    longitudes_separadas = list(map(int, longitudes_separadas))
-    longitudes_separadas.sort(reverse=True)
-    return longitudes_separadas
+def sumar_longitudes(longitudes_palitos):
+    return sum(longitudes_palitos)
 
-def sumar_longitudes(longitudes_separadas):
-    suma = 0
-    for longitud in longitudes_separadas:
-        suma += longitud
-    return suma
+def ordenar_longitudes(longitudes_palitos):
+    return sorted(longitudes_palitos, reverse=True)
 
-def encontrar_divisores(suma):
-    lista_divisores = []
-    for i in range(1, suma + 1):
-        if suma % i == 0:
-            lista_divisores.append(i)
-    return lista_divisores
+def backtracking(indice_actual, es_nueva_varilla, suma_actual, varillas_completadas, longitudes_palitos, longitud_objetivo, total_varillas, num_palitos, usado):
+    if suma_actual == longitud_objetivo:
+        if varillas_completadas + 1 == total_varillas:
+            return True
+        return backtracking(0, 1, 0, varillas_completadas + 1, longitudes_palitos, longitud_objetivo, total_varillas, num_palitos, usado)
 
-def encontrar_longitud_mayor(longitudes_separadas):
-    mayor = max(longitudes_separadas)
-    return mayor
-
-def seleccionar_divisores_validos(lista_divisores, mayor):
-    divisores_validos = []
-    for divisor in lista_divisores:
-        if (divisor >= mayor):
-            divisores_validos.append(divisor)
-    return divisores_validos
-
-def encontrar_longitud_palito(longitudes_separadas, divisores, suma_total):
-    def backtrack(objetivo, longitudes, usados, suma_actual):
-        if suma_actual == objetivo:
-            if all(usados):
-                return True
-            else:
-                return backtrack(objetivo, longitudes, usados, 0)
-        if suma_actual > objetivo:
-            return False
-        for i in range(len(longitudes)):
-            if not usados[i]:
-                if suma_actual + longitudes[i] <= objetivo:
-                    usados[i] = True
-                    if backtrack(objetivo, longitudes, usados, suma_actual + longitudes[i]):
-                        return True
-                    usados[i] = False
-                else:
-                    # Poda temprana: si la longitud actual más la suma actual
-                    # supera el objetivo, no es necesario explorar las
-                    # longitudes restantes.
+    if es_nueva_varilla:
+        for i in range(num_palitos):
+            if not usado[i]:
+                usado[i] = True
+                if backtracking(i + 1, 0, longitudes_palitos[i], varillas_completadas, longitudes_palitos, longitud_objetivo, total_varillas, num_palitos, usado):
+                    return True
+                usado[i] = False
+                break
+    else:
+        for i in range(indice_actual, num_palitos):
+            if not usado[i] and suma_actual + longitudes_palitos[i] <= longitud_objetivo:
+                if i > 0 and longitudes_palitos[i] == longitudes_palitos[i - 1] and not usado[i - 1]: # Evitar duplicados consecutivos, que disminuye mucho el número de combinaciones a probar y el tiempo de ejecución.
+                    continue
+                usado[i] = True
+                if backtracking(i + 1, 0, suma_actual + longitudes_palitos[i], varillas_completadas, longitudes_palitos, longitud_objetivo, total_varillas, num_palitos, usado):
+                    return True
+                usado[i] = False
+                if suma_actual + longitudes_palitos[i] == longitud_objetivo:
                     break
-        return False
-
-    long_max = max(longitudes_separadas)
-    for divisor in sorted(divisores):
-        if divisor >= long_max and suma_total % divisor == 0:
-            usados = [False] * len(longitudes_separadas)
-            if backtrack(divisor, longitudes_separadas, usados, 0):
-                return divisor
-    return None
-
-
+    return False
 
 def main():
     print('Pegue la serie de datos, incluido el 0 al final, y presione Enter:\n')
-    entradas = []
+    primera_entrada = True
+
     while True:
-        entrada = input()
-        if entrada.strip() == '0':
-            entradas.append(entrada.strip())
+        num_palitos, longitudes_palitos = solicitar_datos()
+        if num_palitos is None:
+            print('\n')
             break
-        entradas.extend(entrada.strip().split('\n'))
 
-    for i in range(0, len(entradas), 2):
-        palitos_cortados = int(entradas[i])
-        if palitos_cortados == 0:
-            break
-        longitudes = entradas[i + 1]
+        if primera_entrada:
+            print('\n')
+            primera_entrada = False
 
-        longitudes_separadas = separar_longitudes(longitudes)
-        suma = sumar_longitudes(longitudes_separadas)
-        lista_divisores = encontrar_divisores(suma)
-        mayor = encontrar_longitud_mayor(longitudes_separadas)
-        divisores_validos = seleccionar_divisores_validos(lista_divisores, mayor)
-        longitud_minima = encontrar_longitud_palito(longitudes_separadas, divisores_validos, suma)
-        print(longitud_minima)
+        longitud_total = sumar_longitudes(longitudes_palitos)
+        longitudes_palitos = ordenar_longitudes(longitudes_palitos)
+
+        solucion_encontrada = False
+
+        for longitud_posible in range(longitudes_palitos[0], longitud_total // 2 + 1):
+            if longitud_total % longitud_posible != 0:
+                continue
+            longitud_objetivo = longitud_posible
+            total_varillas = longitud_total // longitud_posible
+            usado = [False] * num_palitos
+
+            solucion_encontrada = backtracking(0, 1, 0, 0, longitudes_palitos, longitud_objetivo, total_varillas, num_palitos, usado)
+            if solucion_encontrada:
+                break
+
+        if not solucion_encontrada:
+            longitud_objetivo = longitud_total
+        print(longitud_objetivo)
 
 if __name__ == "__main__":
     main()
